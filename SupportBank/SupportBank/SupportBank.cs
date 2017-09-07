@@ -157,43 +157,30 @@ namespace SupportBank
                 if ((xmlReader.Name == "SupportTransaction"))
                 {
                     date = xmlReader.GetAttribute("Date");
-
                 }
                 else if ((xmlReader.Name == "Description"))
                 {
-
                     description = xmlReader.ReadElementContentAsString();
-
                 }
                 else if ((xmlReader.Name == "Value"))
                 {
-
                     value = xmlReader.ReadElementContentAsDecimal();
-
                 }
                 else if ((xmlReader.Name == "From"))
                 {
-
                     from = xmlReader.ReadElementContentAsString();
-
                 }
                 else if ((xmlReader.Name == "To"))
                 {
-
                     to = xmlReader.ReadElementContentAsString();
-
                 }
 
                 if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "SupportTransaction")
                 {
+                    //TODO date is in 'days after 1/1/1970' format at a guess. Fix that.
                     DateTime.TryParse(date, out DateTime result);
 
                     listOfTransactions.Add(new Transaction(from, to, description, value, result));
-                    date = "";
-                    description = "";
-                    from = "";
-                    to = "";
-                    value = 0;
                 }
             }
 
