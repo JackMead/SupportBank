@@ -31,13 +31,13 @@ namespace SupportBank
 
             foreach (var line in lines)
             {
-                string[] elements = lines[i].Split(',');
-                if(!decimal.TryParse(elements[4], out decimal amount))
+                string[] elements = line.Split(',');
+                if (!decimal.TryParse(elements[4], out decimal amount))
                 {
                     amount = 0;
                 }
                 //Order in CSV is Date,From,To,Narrative,Amount
-                listOfTransactions.Add(GenerateTransaction(elements[0], elements[1], elements[2], elements[3], amount));
+                listOfTransactions.Add(new Transaction(elements[1], elements[2], elements[3], amount, elements[0]));
             }
 
             return listOfTransactions;
@@ -64,11 +64,6 @@ namespace SupportBank
             }
 
             return listOfAccounts;
-        }
-
-        private Transaction GenerateTransaction(string date, string from, string to, string description, decimal amount)
-        {
-            return new Transaction(date, from, to, amount, description);
         }
 
         private void HandleUserInput(List<Transaction> listOfTransactions)
