@@ -10,6 +10,8 @@ namespace SupportBank
     {
         static void Main(string[] args)
         {
+            SupportBank s = new SupportBank();
+            s.Run();
         }
     }
 }
