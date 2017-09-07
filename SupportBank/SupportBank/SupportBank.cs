@@ -1,4 +1,7 @@
-﻿using System;
+﻿using NLog;
+using NLog.Config;
+using NLog.Targets;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
@@ -10,8 +13,14 @@ namespace SupportBank
 {
     class SupportBank
     {
+        private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
+
         public void Run()
         {
+            SetupNLog();
+
+            logger.Debug("Nlog up");
+            logger.Fatal("Just died");
             string path = @"Resources/Transactions2014.csv";
 
             var listOfTransactions = GenerateTransactionsFromCSV(path);
@@ -21,6 +30,21 @@ namespace SupportBank
             PrintAccounts(listOfAccounts);
             PrintAccountsSum(listOfAccounts);
 
+            string pathForDodgyCSV = @"Resources/DodgyTransactions2015.csv";
+            var dodgyListOfTransactions = GenerateTransactionsFromCSV(pathForDodgyCSV);
+            var dodgyListOfAccounts = GenerateAccountsFromTransactions(dodgyListOfTransactions);
+            HandleUserInput(dodgyListOfTransactions);
+            PrintAccounts(dodgyListOfAccounts);
+        
+        }
+
+        private void SetupNLog()
+        {
+            var config = new LoggingConfiguration();
+            var target = new FileTarget { FileName = @"C:\Work\Logs\SupportBank.log", Layout = @"${longdate} ${level} - ${logger}: ${message}" };
+            config.AddTarget("File Logger", target);
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
+            LogManager.Configuration = config;
         }
 
         private List<Transaction> GenerateTransactionsFromCSV(string path)
@@ -78,12 +102,24 @@ namespace SupportBank
                 {
                     PrintTransactions(listOfTransactions);
                 }
+                else if (userChoice.Length < 5)
+                {
+                    PrintInvalidChoiceMessage();
+                }
                 else if (userChoice.Substring(0, 4) == "list")
                 {
                     string accountName = GetAccountName(userChoice);
-
+                    //check valid account name
+                    if(listOfTransactions.Where(transaction => transaction.from.ToLower() == accountName || transaction.to.ToLower() == accountName).Count() == 0)
+                    {
+                        Console.WriteLine("No account exists with that name");
+                    }
                     PrintTransactions(listOfTransactions.Where(transaction => transaction.from.ToLower() == accountName || transaction.to.ToLower() == accountName));
 
+                }
+                else
+                {
+                    PrintInvalidChoiceMessage();
                 }
 
                 Console.WriteLine();
@@ -154,6 +190,11 @@ namespace SupportBank
         {
             string name = userChoice.Substring(5);
             return name;
+        }
+
+        private void PrintInvalidChoiceMessage()
+        {
+            Console.WriteLine("Sorry, I didn't understand that.");
         }
     }
 }
