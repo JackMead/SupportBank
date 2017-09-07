@@ -9,6 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 
 namespace SupportBank
 {
@@ -20,38 +23,76 @@ namespace SupportBank
         {
             SetupNLog();
 
-
-            string csvPath = @"Resources/Transactions2014.csv";
-            var listOfTransactions = GenerateTransactionsFromCSV(csvPath);
-            var listOfAccounts = GenerateAccountsFromTransactions(listOfTransactions);
-
-            HandleUserInput(listOfTransactions);
-            PrintAccounts(listOfAccounts);
-            PrintAccountsSum(listOfAccounts);
-
-            string pathForDodgyCSV = @"Resources/DodgyTransactions2015.csv";
-            var dodgyListOfTransactions = GenerateTransactionsFromCSV(pathForDodgyCSV);
-            var dodgyListOfAccounts = GenerateAccountsFromTransactions(dodgyListOfTransactions);
-            HandleUserInput(dodgyListOfTransactions);
-            PrintAccounts(dodgyListOfAccounts);
-
-            string pathFor2013Transactions = @"Resources/Transactions2013.json";
-            var listOfTransactions2013 = GenerateTransactionsFromJSON(pathFor2013Transactions);
-            var listOfAccounts2013 = GenerateAccountsFromTransactions(listOfTransactions2013);
-            HandleUserInput(listOfTransactions2013);
-            PrintAccounts(listOfAccounts2013);
+            WhichYearToProcess();
 
             HandleUserProvidedTransactionFile();
 
+
+
         }
 
-        private void SetupNLog()
+        private void WhichYearToProcess()
         {
-            var config = new LoggingConfiguration();
-            var target = new FileTarget { FileName = @"C:\Work\Logs\SupportBank.log", Layout = @"${longdate} ${level} - ${logger}: ${message}" };
-            config.AddTarget("File Logger", target);
-            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
-            LogManager.Configuration = config;
+            Console.WriteLine("Which year would you like to see? 2012-2015");
+            string userResponse = "";
+            string path = "";
+
+            while (userResponse != "quit")
+            {
+                userResponse = Console.ReadLine();
+                switch (userResponse)
+                {
+                    case "2012":
+                        path = @"Resources/Transactions2012.xml";
+                        userResponse = "quit";
+                        break;
+
+                    case "2013":
+                        path = @"Resources/Transactions2013.json";
+                        userResponse = "quit";
+                        break;
+
+                    case "2014":
+                        path = @"Resources/Transactions2014.csv";
+                        userResponse = "quit";
+                        break;
+
+                    case "2015":
+                        path = @"Resources/DodgyTransactions2015.csv";
+                        userResponse = "quit";
+                        break;
+
+                    default:
+                        Console.WriteLine("Sorry, didn't understand that. Try again? (or type \"quit\" to leave");
+                        break;
+                }
+            }
+
+            string fileType = DetermineFileType(path);
+            var listOfTransactions = GenerateTransactions(path, fileType);
+            var listOfAccounts = GenerateAccountsFromTransactions(listOfTransactions);
+            HandleUserInput(listOfTransactions);
+            PrintAccounts(listOfAccounts);
+        }
+
+        private List<Transaction> GenerateTransactions(string path, string fileType)
+        {
+            if (fileType == "csv")
+            {
+                return GenerateTransactionsFromCSV(path);
+            }
+            else if (fileType == "json")
+            {
+                return GenerateTransactionsFromJSON(path);
+            }
+            else if (fileType == "xml")
+            {
+                return GenerateTransactionsFromXML(path);
+            }
+            else
+            {
+                return new List<Transaction>();
+            }
         }
 
         private List<Transaction> GenerateTransactionsFromCSV(string path)
@@ -101,6 +142,65 @@ namespace SupportBank
 
         }
 
+        private List<Transaction> GenerateTransactionsFromXML(string path)
+        {
+            var listOfTransactions = new List<Transaction>();
+
+            XmlReader xmlReader = XmlReader.Create(path);
+            string date = "";
+            string description = "";
+            string from = "";
+            string to = "";
+            decimal value = 0;
+            while (xmlReader.Read())
+            {
+                if ((xmlReader.Name == "SupportTransaction"))
+                {
+                    date = xmlReader.GetAttribute("Date");
+
+                }
+                else if ((xmlReader.Name == "Description"))
+                {
+
+                    description = xmlReader.ReadElementContentAsString();
+
+                }
+                else if ((xmlReader.Name == "Value"))
+                {
+
+                    value = xmlReader.ReadElementContentAsDecimal();
+
+                }
+                else if ((xmlReader.Name == "From"))
+                {
+
+                    from = xmlReader.ReadElementContentAsString();
+
+                }
+                else if ((xmlReader.Name == "To"))
+                {
+
+                    to = xmlReader.ReadElementContentAsString();
+
+                }
+
+                if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "SupportTransaction")
+                {
+                    DateTime.TryParse(date, out DateTime result);
+
+                    listOfTransactions.Add(new Transaction(from, to, description, value, result));
+                    date = "";
+                    description = "";
+                    from = "";
+                    to = "";
+                    value = 0;
+                }
+            }
+
+            return listOfTransactions;
+
+        }
+
         private List<Account> GenerateAccountsFromTransactions(List<Transaction> listOfTransactions)
         {
             var listOfAccounts = new List<Account>();
@@ -135,7 +235,7 @@ namespace SupportBank
                 }
                 else if (userChoice.Length < 5)
                 {
-                    PrintInvalidChoiceMessage();
+                    Console.WriteLine("Sorry, I didn't understand that.");
                 }
                 else if (userChoice.Substring(0, 4) == "list")
                 {
@@ -145,12 +245,15 @@ namespace SupportBank
                     {
                         Console.WriteLine("No account exists with that name");
                     }
-                    PrintTransactions(listOfTransactions.Where(transaction => transaction.FromAccount.ToLower() == accountName || transaction.ToAccount.ToLower() == accountName));
+                    PrintTransactions(listOfTransactions
+                        .Where(transaction => transaction.FromAccount.ToLower() == accountName
+                            || transaction.ToAccount.ToLower() == accountName)
+                        .ToList());
 
                 }
                 else
                 {
-                    PrintInvalidChoiceMessage();
+                    Console.WriteLine("Sorry, I didn't understand that.");
                 }
 
                 Console.WriteLine();
@@ -158,7 +261,6 @@ namespace SupportBank
                 userChoice = Console.ReadLine();
 
             }
-
         }
 
         private void HandleUserProvidedTransactionFile()
@@ -170,29 +272,64 @@ namespace SupportBank
             {
                 while (userResponse != "quit")
                 {
-                    if (userResponse.Substring(userResponse.Length - 3) == "csv")
+                    string fileType = DetermineFileType(userResponse);
+                    if (fileType == "csv")
                     {
                         GenerateTransactionsFromCSV(userResponse);
+                        break;
                     }
-                    else if (userResponse.Substring(userResponse.Length - 4) == "json")
+                    else if (fileType == "json")
                     {
                         GenerateTransactionsFromJSON(userResponse);
+                        break;
                     }
                     else
                     {
                         Console.WriteLine("Sorry, that doesn't seem to be a suitable filetype");
+                        Console.WriteLine("Would you like to try typing the path again? Type \"quit\" to leave otherwise");
+                        userResponse = Console.ReadLine();
+
                     }
-                    Console.WriteLine("Would you like to try typing the path again? Type \"quit\" to leave otherwise");
-                    userResponse = Console.ReadLine();
+
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error(e.Message);
                 Console.WriteLine();
                 Console.WriteLine("Error with the provided path or file. See log for details");
                 Console.WriteLine();
             }
+        }
+
+        private string DetermineFileType(string path)
+        {
+            if (path.Substring(path.Length - 3) == "csv")
+            {
+                return "csv";
+            }
+            else if (path.Substring(path.Length - 4) == "json")
+            {
+                return "json";
+            }
+            else if (path.Substring(path.Length - 3) == "xml")
+            {
+                return "xml";
+            }
+            else
+            {
+                return "other";
+            }
+
+        }
+
+        private void SetupNLog()
+        {
+            var config = new LoggingConfiguration();
+            var target = new FileTarget { FileName = @"C:\Work\Logs\SupportBank.log", Layout = @"${longdate} ${level} - ${logger}: ${message}" };
+            config.AddTarget("File Logger", target);
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
+            LogManager.Configuration = config;
         }
 
         private string[] GetLinesFromCSV(string path)
@@ -222,7 +359,7 @@ namespace SupportBank
             listOfAccounts.First(p => p.name == transaction.ToAccount).GainMoney(transaction.Amount);
         }
 
-        private void PrintAccountsSum(List<Account> listOfAccounts)
+        private void PrintSumOfAccountBalances(List<Account> listOfAccounts)
         {
             decimal sum = 0;
 
@@ -239,7 +376,7 @@ namespace SupportBank
             }
         }
 
-        private void PrintTransactions(IEnumerable<Transaction> listOfTransactions)
+        private void PrintTransactions(List<Transaction> listOfTransactions)
         {
             if (listOfTransactions.Count() == 0)
             {
@@ -265,11 +402,6 @@ namespace SupportBank
         {
             string name = userChoice.Substring(5);
             return name;
-        }
-
-        private void PrintInvalidChoiceMessage()
-        {
-            Console.WriteLine("Sorry, I didn't understand that.");
         }
 
         private void LogAndPrintJsonError(Exception e)
