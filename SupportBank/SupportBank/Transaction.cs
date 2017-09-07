@@ -8,33 +8,24 @@ namespace SupportBank
 {
     class Transaction
     {
-        public string from;
-        public string to;
-        public string description;
-        public decimal amount;
-        public string date;
-        public bool validTransaction = true;
+        public string FromAccount;
+        public string ToAccount;
+        public string Narrative;
+        public decimal Amount;
+        public DateTime Date;
 
-        public Transaction(string from, string to, string description, decimal amount, string date)
+        public Transaction(string from, string to, string description, decimal amount, DateTime date)
         {
-            this.from = from;
-            this.to = to;
-            this.description = description;
-            this.date = date;
-            if (amount == 0)
-            {
-                validTransaction = false;
-            }
-            this.amount = amount;
+            this.FromAccount = from;
+            this.ToAccount = to;
+            this.Narrative = description;
+            this.Date = date;
+            this.Amount = amount;
         }
 
         public override string ToString()
         {
-            if (!validTransaction)
-            {
-                return "An invalid transaction was made between " + from + " and " + to;
-            }
-            string output = from + " transferred " + amount + " to " + to + " for " + description + " on the date " + date;
+            string output = FromAccount + " transferred " + Amount + " to " + ToAccount + " for " + Narrative + " on the date " + Date.ToShortDateString();
             return output;
         }
     }

@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using Newtonsoft.Json;
+using NLog;
 using NLog.Config;
 using NLog.Targets;
 using System;
@@ -19,11 +20,9 @@ namespace SupportBank
         {
             SetupNLog();
 
-            logger.Debug("Nlog up");
-            logger.Fatal("Just died");
-            string path = @"Resources/Transactions2014.csv";
 
-            var listOfTransactions = GenerateTransactionsFromCSV(path);
+            string csvPath = @"Resources/Transactions2014.csv";
+            var listOfTransactions = GenerateTransactionsFromCSV(csvPath);
             var listOfAccounts = GenerateAccountsFromTransactions(listOfTransactions);
 
             HandleUserInput(listOfTransactions);
@@ -35,7 +34,15 @@ namespace SupportBank
             var dodgyListOfAccounts = GenerateAccountsFromTransactions(dodgyListOfTransactions);
             HandleUserInput(dodgyListOfTransactions);
             PrintAccounts(dodgyListOfAccounts);
-        
+
+            string pathFor2013Transactions = @"Resources/Transactions2013.json";
+            var listOfTransactions2013 = GenerateTransactionsFromJSON(pathFor2013Transactions);
+            var listOfAccounts2013 = GenerateAccountsFromTransactions(listOfTransactions2013);
+            HandleUserInput(listOfTransactions2013);
+            PrintAccounts(listOfAccounts2013);
+
+            HandleUserProvidedTransactionFile();
+
         }
 
         private void SetupNLog()
@@ -58,13 +65,39 @@ namespace SupportBank
                 string[] elements = line.Split(',');
                 if (!decimal.TryParse(elements[4], out decimal amount))
                 {
-                    amount = 0;
+                    logger.Error("The transaction amount {0} is not a vaid decimal", elements[4]);
+                    Console.WriteLine();
+                    Console.WriteLine("ERROR OCCURED PROCESSING TRANSACTIONS: See log for details");
+                    Console.WriteLine();
+                }
+                if (!DateTime.TryParse(elements[0], out DateTime date))
+                {
+                    logger.Error("The date \"{0}\" is not a vaid decimal", elements[0]);
+                    Console.WriteLine();
+                    Console.WriteLine("ERROR OCCURED PROCESSING TRANSACTIONS: See log for details");
+                    Console.WriteLine();
                 }
                 //Order in CSV is Date,From,To,Narrative,Amount
-                listOfTransactions.Add(new Transaction(elements[1], elements[2], elements[3], amount, elements[0]));
+                listOfTransactions.Add(new Transaction(elements[1], elements[2], elements[3], amount, date));
             }
 
             return listOfTransactions;
+
+        }
+
+        private List<Transaction> GenerateTransactionsFromJSON(string path)
+        {
+            try
+            {
+                var listOfTransactions = JsonConvert.DeserializeObject<List<Transaction>>(File.ReadAllText(path));
+                PrintTransactions(listOfTransactions);
+                return listOfTransactions;
+            }
+            catch (Exception e)
+            {
+                LogAndPrintJsonError(e);
+                return new List<Transaction>();
+            }
 
         }
 
@@ -73,18 +106,16 @@ namespace SupportBank
             var listOfAccounts = new List<Account>();
             foreach (var transaction in listOfTransactions)
             {
-                if (listOfAccounts.Where(p => p.name == transaction.from).Count() == 0)
+                if (listOfAccounts.Where(p => p.name == transaction.FromAccount).Count() == 0)
                 {
-                    listOfAccounts.Add(new Account(transaction.from, 0));
+                    listOfAccounts.Add(new Account(transaction.FromAccount, 0));
                 }
-                if (listOfAccounts.Where(p => p.name == transaction.to).Count() == 0)
+                if (listOfAccounts.Where(p => p.name == transaction.ToAccount).Count() == 0)
                 {
-                    listOfAccounts.Add(new Account(transaction.to, 0));
+                    listOfAccounts.Add(new Account(transaction.ToAccount, 0));
                 }
 
-                listOfAccounts.First(p => p.name == transaction.from).GainMoney(transaction.amount * -1);
-                listOfAccounts.First(p => p.name == transaction.to).GainMoney(transaction.amount);
-
+                EnactTransaction(ref listOfAccounts, transaction);
             }
 
             return listOfAccounts;
@@ -110,11 +141,11 @@ namespace SupportBank
                 {
                     string accountName = GetAccountName(userChoice);
                     //check valid account name
-                    if(listOfTransactions.Where(transaction => transaction.from.ToLower() == accountName || transaction.to.ToLower() == accountName).Count() == 0)
+                    if (listOfTransactions.Where(transaction => transaction.FromAccount.ToLower() == accountName || transaction.ToAccount.ToLower() == accountName).Count() == 0)
                     {
                         Console.WriteLine("No account exists with that name");
                     }
-                    PrintTransactions(listOfTransactions.Where(transaction => transaction.from.ToLower() == accountName || transaction.to.ToLower() == accountName));
+                    PrintTransactions(listOfTransactions.Where(transaction => transaction.FromAccount.ToLower() == accountName || transaction.ToAccount.ToLower() == accountName));
 
                 }
                 else
@@ -128,6 +159,40 @@ namespace SupportBank
 
             }
 
+        }
+
+        private void HandleUserProvidedTransactionFile()
+        {
+            Console.WriteLine("If you have transactions (in json or csv form) you would like us to handle, please provide the full path:");
+            string userResponse = Console.ReadLine();
+
+            try
+            {
+                while (userResponse != "quit")
+                {
+                    if (userResponse.Substring(userResponse.Length - 3) == "csv")
+                    {
+                        GenerateTransactionsFromCSV(userResponse);
+                    }
+                    else if (userResponse.Substring(userResponse.Length - 4) == "json")
+                    {
+                        GenerateTransactionsFromJSON(userResponse);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Sorry, that doesn't seem to be a suitable filetype");
+                    }
+                    Console.WriteLine("Would you like to try typing the path again? Type \"quit\" to leave otherwise");
+                    userResponse = Console.ReadLine();
+                }
+            }
+            catch(Exception e)
+            {
+                logger.Error(e.Message);
+                Console.WriteLine();
+                Console.WriteLine("Error with the provided path or file. See log for details");
+                Console.WriteLine();
+            }
         }
 
         private string[] GetLinesFromCSV(string path)
@@ -151,6 +216,12 @@ namespace SupportBank
 
         }
 
+        private void EnactTransaction(ref List<Account> listOfAccounts, Transaction transaction)
+        {
+            listOfAccounts.First(p => p.name == transaction.FromAccount).GainMoney(transaction.Amount * -1);
+            listOfAccounts.First(p => p.name == transaction.ToAccount).GainMoney(transaction.Amount);
+        }
+
         private void PrintAccountsSum(List<Account> listOfAccounts)
         {
             decimal sum = 0;
@@ -170,6 +241,10 @@ namespace SupportBank
 
         private void PrintTransactions(IEnumerable<Transaction> listOfTransactions)
         {
+            if (listOfTransactions.Count() == 0)
+            {
+                return;
+            }
             Console.WriteLine();
             foreach (var transaction in listOfTransactions)
             {
@@ -195,6 +270,14 @@ namespace SupportBank
         private void PrintInvalidChoiceMessage()
         {
             Console.WriteLine("Sorry, I didn't understand that.");
+        }
+
+        private void LogAndPrintJsonError(Exception e)
+        {
+            logger.Error(e.Message);
+            Console.WriteLine();
+            Console.WriteLine("ERROR deserializing Json, see log for details");
+            Console.WriteLine();
         }
     }
 }
