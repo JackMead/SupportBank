@@ -58,6 +58,10 @@
     <Compile Include="SupportBank.cs" />
     <Compile Include="Transaction.cs" />
     <Compile Include="TransactionsGenerator.cs" />
+    <Compile Include="TransactionsGeneratorCSV.cs" />
+    <Compile Include="TransactionsGeneratorFactory.cs" />
+    <Compile Include="TransactionsGeneratorJson.cs" />
+    <Compile Include="TransactionsGeneratorXml.cs" />
     <Compile Include="TransactionsPrinter.cs" />
     <Compile Include="UserHandler.cs" />
   </ItemGroup>

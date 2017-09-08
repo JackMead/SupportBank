@@ -25,17 +25,17 @@ namespace SupportBank
 
             var userHandler = new UserHandler();
 
-            if (userHandler.ExternalTransactionFileChosen())
+            if (userHandler.UserHasChosenExternalFile())
             {
                 string path = userHandler.GetUserFilePath();
                 string fileType = DetermineFileType(path);
-                HandleTransactionsFile(path, fileType);
+                HandleUserRequestsUsingTransactionsFile(path, fileType);
             }
             else
             {
                 string path = userHandler.ReturnFilePathForUserChosenYear();
                 string fileType = DetermineFileType(path);
-                HandleTransactionsFile(path, fileType);
+                HandleUserRequestsUsingTransactionsFile(path, fileType);
             }
         }
 
@@ -48,21 +48,27 @@ namespace SupportBank
             LogManager.Configuration = config;
         }
         
-        private void HandleTransactionsFile(string path, string fileType)
+        private void HandleUserRequestsUsingTransactionsFile(string path, string fileType)
         {
-            var transactionsGenerator = new TransactionsGenerator();
-            var listOfTransactions = transactionsGenerator.GenerateTransactions(path, fileType);
+            var transactionsGeneratorFactory = new TransactionsGeneratorFactory();
+            var transactionsGenerator = transactionsGeneratorFactory.ReturnGenerator(path,fileType);
+            var listOfTransactions = transactionsGenerator.GenerateTransactions(path);
 
-            var accounts = new Accounts(listOfTransactions);
-            accounts.PrintAccounts();
-
-            var userHandler = new UserHandler();
-            userHandler.HandleUserTransactionPrintingRequests(listOfTransactions);
-
-            if (userHandler.WantsToExport())
+            if (listOfTransactions.Count() != 0)
             {
-                userHandler.ExportAsXML(listOfTransactions);
+                var accounts = new Accounts(listOfTransactions);
+                accounts.PrintAccounts();
+
+                var userHandler = new UserHandler();
+                userHandler.HandleUserTransactionPrintingRequests(listOfTransactions);
+
+                if (userHandler.WantsToExport())
+                {
+                    userHandler.ExportAsXML(listOfTransactions);
+                }
             }
+
+            
         }
 
         public string DetermineFileType(string path)

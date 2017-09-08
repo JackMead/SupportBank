@@ -51,7 +51,6 @@ namespace SupportBank
 
         public void HandleUserTransactionPrintingRequests(List<Transaction> listOfTransactions)
         {
-            Console.WriteLine();
             Console.WriteLine("Would you like to see any of the transactions?");
             Console.WriteLine("Options: \"List All\", \"List [Account name]\", \"Quit\"");
             var transactionsPrinter = new TransactionsPrinter();
@@ -109,7 +108,7 @@ namespace SupportBank
 
         }
 
-        public bool ExternalTransactionFileChosen()
+        public bool UserHasChosenExternalFile()
         {
             Console.WriteLine();
             Console.WriteLine("Do you want to: ");
