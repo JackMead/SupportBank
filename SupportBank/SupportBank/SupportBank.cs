@@ -189,7 +189,7 @@ namespace SupportBank
             return listOfTransactions;
 
         }
-
+        
         private List<Account> GenerateAccountsFromTransactions(List<Transaction> listOfTransactions)
         {
             var listOfAccounts = new List<Account>();
