@@ -23,17 +23,14 @@ namespace SupportBank
             this.Amount = amount;
         }
 
-        public Transaction(string from, string to, string description, decimal amount, string dateAsString)
+        /*public Transaction(string from, string to, string description, decimal amount, string dateAsString)
         {
             int.TryParse(dateAsString, out int dateAsInt);
             DateTime date = DateTime.FromOADate(dateAsInt);
             new Transaction(from, to, description, amount, date);
-        }
+        }*/
 
-        public Transaction()
-        {
-
-        }
+        public Transaction() {}
 
         public override string ToString()
         {
