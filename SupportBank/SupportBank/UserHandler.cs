@@ -14,90 +14,52 @@ namespace SupportBank
         {
             Console.WriteLine("Which year would you like to see? 2012-2015");
             string userResponse = "";
+            bool validYearProvided = false;
             string path = "";
 
-            while (userResponse != "quit")
+            var filePathByYearDictionary = new Dictionary<int, string>() {
+                { 2012, @"Resources/Transactions2012.xml" },
+                { 2013, @"Resources/Transactions2013.json" },
+                { 2014, @"Resources/Transactions2014.csv"},
+                { 2015, @"Resources/DodgyTransactions2015.csv" }
+            };
+
+            while (!validYearProvided)
             {
                 userResponse = Console.ReadLine();
-                switch (userResponse)
+                if (int.TryParse(userResponse, out int year))
                 {
-                    case "quit":
-                        path = "None";
-                        break;
-
-                    case "2012":
-                        path = @"Resources/Transactions2012.xml";
-                        userResponse = "quit";
-                        break;
-
-                    case "2013":
-                        path = @"Resources/Transactions2013.json";
-                        userResponse = "quit";
-                        break;
-
-                    case "2014":
-                        path = @"Resources/Transactions2014.csv";
-                        userResponse = "quit";
-                        break;
-
-                    case "2015":
-                        path = @"Resources/DodgyTransactions2015.csv";
-                        userResponse = "quit";
-                        break;
-
-                    default:
-                        Console.WriteLine("Sorry, didn't understand that. Try again? (or type \"quit\" to leave");
-                        break;
+                    try
+                    {
+                        path = filePathByYearDictionary[year];
+                        validYearProvided = true;
+                    }
+                    catch
+                    {
+                        validYearProvided = false;
+                        Console.WriteLine("Sorry, we don't have the transactions for that year. Try a year between 2012 and 2015");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Sorry, I didn't receive an integer there. Which year would you like the transactions for?");
                 }
             }
             return path;
 
         }
 
-        public void HandleUserProvidedTransactionsFile()
+        public string GetUserFilePath()
         {
-            var transactionsGenerator = new TransactionsGenerator();
-            Console.WriteLine("If you have transactions (in json or csv form) you would like us to handle, please provide the full path:");
-            string userResponse = Console.ReadLine();
+            Console.WriteLine("If you have transactions (in json,xml or csv form) you would like us to handle, please provide the full path:");
+            return Console.ReadLine();
 
-            try
-            {
-                while (userResponse != "quit")
-                {
-                    string fileType = DetermineFileType(userResponse);
-                    if (fileType == "csv")
-                    {
-                        transactionsGenerator.GenerateFromCSV(userResponse);
-                        break;
-                    }
-                    else if (fileType == "json")
-                    {
-                        transactionsGenerator.GenerateFromJson(userResponse);
-                        break;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Sorry, that doesn't seem to be a suitable filetype");
-                        Console.WriteLine("Would you like to try typing the path again? Type \"quit\" to leave otherwise");
-                        userResponse = Console.ReadLine();
-
-                    }
-
-                }
-            }
-            catch (Exception e)
-            {
-                SupportBank.logger.Error(e.Message);
-                Console.WriteLine();
-                Console.WriteLine("Error with the provided path or file. See log for details");
-                Console.WriteLine();
-            }
         }
 
         public void ExportAsXML(List<Transaction> listOfTransactions)
         {
-            string fileName = GetUserFileName();
-            
+            string fileName = GetUserFileName() + ".xml";
+
             XmlSerializer serializer =
             new XmlSerializer(typeof(List<Transaction>));
 
@@ -108,6 +70,28 @@ namespace SupportBank
                 serializer.Serialize(writer, listOfTransactions);
             }
 
+
+        }
+
+        public bool ExternalTransactionFileChosen()
+        {
+            Console.WriteLine();
+            Console.WriteLine("Do you want to: ");
+            Console.WriteLine("1. Provide your own Transactions file");
+            Console.WriteLine("2. Access a Transactions file already imported");
+            Console.WriteLine("Please enter 1 or 2 for the appropriate option");
+            string response = Console.ReadLine();
+            while (response != "1" && response != "2")
+            {
+                Console.WriteLine("Sorry, I didn't get that. Option 1 or 2?");
+                response = Console.ReadLine();
+            }
+            if (response == "1")
+            {
+                return true;
+            }
+
+            return false;
 
         }
 
@@ -130,29 +114,5 @@ namespace SupportBank
             return Console.ReadLine();
         }
 
-        public string DetermineFileType(string path)
-        {
-            if (path.Length < 3)
-            {
-                return "other";
-            }
-            if (path.Substring(path.Length - 3) == "csv")
-            {
-                return "csv";
-            }
-            else if (path.Substring(path.Length - 4) == "json")
-            {
-                return "json";
-            }
-            else if (path.Substring(path.Length - 3) == "xml")
-            {
-                return "xml";
-            }
-            else
-            {
-                return "other";
-            }
-
-        }
     }
 }

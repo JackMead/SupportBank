@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace SupportBank
 {
-    class AccountsManager
+    class Accounts
     {
         public List<Account> ListOfAccounts { get; set; }
 
-        public AccountsManager(List<Transaction> listOfTransactions)
+        public Accounts(List<Transaction> listOfTransactions)
         {
             ListOfAccounts = GenerateAccountsFromTransactions(listOfTransactions);
         }

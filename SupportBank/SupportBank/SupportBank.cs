@@ -24,25 +24,20 @@ namespace SupportBank
             SetupNLog();
 
             var userHandler = new UserHandler();
-            string path = userHandler.ReturnFilePathForUserChosenYear();
 
-            string fileType = userHandler.DetermineFileType(path);
-
-            var transactionsGenerator = new TransactionsGenerator();
-            var listOfTransactions = transactionsGenerator.GenerateTransactions(path, fileType);
-
-            var accountsManager = new AccountsManager(listOfTransactions);
-            accountsManager.PrintAccounts();
-
-            var transactionsPrinter = new TransactionsPrinter(listOfTransactions);
-            transactionsPrinter.HandleUserRequests();
-            
-            if (userHandler.WantsToExport())
+            if (userHandler.ExternalTransactionFileChosen())
             {
-                userHandler.ExportAsXML(listOfTransactions);
+                string path = userHandler.GetUserFilePath();
+                string fileType = DetermineFileType(path);
+                HandleTransactionsFile(path, fileType);
+            }
+            else
+            {
+                string path = userHandler.ReturnFilePathForUserChosenYear();
+                string fileType = DetermineFileType(path);
+                HandleTransactionsFile(path, fileType);
             }
 
-            userHandler.HandleUserProvidedTransactionsFile();
         }
 
         private void SetupNLog()
@@ -52,6 +47,49 @@ namespace SupportBank
             config.AddTarget("File Logger", target);
             config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
             LogManager.Configuration = config;
+        }
+        
+        private void HandleTransactionsFile(string path, string fileType)
+        {
+            var transactionsGenerator = new TransactionsGenerator();
+            var listOfTransactions = transactionsGenerator.GenerateTransactions(path, fileType);
+
+            var accounts = new Accounts(listOfTransactions);
+            accounts.PrintAccounts();
+
+            var transactionsPrinter = new TransactionsPrinter(listOfTransactions);
+            transactionsPrinter.HandleUserRequests();
+
+            var userHandler = new UserHandler();
+            if (userHandler.WantsToExport())
+            {
+                userHandler.ExportAsXML(listOfTransactions);
+            }
+        }
+
+        public string DetermineFileType(string path)
+        {
+            if (path.Length < 3)
+            {
+                return "other";
+            }
+            if (path.Substring(path.Length - 3) == "csv")
+            {
+                return "csv";
+            }
+            else if (path.Substring(path.Length - 4) == "json")
+            {
+                return "json";
+            }
+            else if (path.Substring(path.Length - 3) == "xml")
+            {
+                return "xml";
+            }
+            else
+            {
+                return "other";
+            }
+
         }
 
     }

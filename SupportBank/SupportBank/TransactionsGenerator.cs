@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Serialization;
 
 namespace SupportBank
 {
@@ -24,10 +25,11 @@ namespace SupportBank
             }
             else if (fileType == "xml")
             {
-                return GenerateFromXML(path);
+                return GenerateFromXMLAlternative(path);
             }
             else
             {
+                Console.WriteLine("Error: FileType not accepted. Try using a csv, json or xml file");
                 return new List<Transaction>();
             }
         }
@@ -83,49 +85,74 @@ namespace SupportBank
         public List<Transaction> GenerateFromXML(string path)
         {
             var listOfTransactions = new List<Transaction>();
-
-            XmlReader xmlReader = XmlReader.Create(path);
-            string dateAsString = "";
-            string description = "";
-            string from = "";
-            string to = "";
-            decimal value = 0;
-            while (xmlReader.Read())
+            try
             {
-                if ((xmlReader.Name == "SupportTransaction") && (xmlReader.NodeType != XmlNodeType.EndElement))
+                XmlReader xmlReader = XmlReader.Create(path);
+                string dateAsString = "";
+                string description = "";
+                string from = "";
+                string to = "";
+                decimal value = 0;
+                while (xmlReader.Read())
                 {
-                    dateAsString = xmlReader.GetAttribute("Date");
-                }
-                else if ((xmlReader.Name == "Description"))
-                {
-                    description = xmlReader.ReadElementContentAsString();
-                }
-                else if ((xmlReader.Name == "Value"))
-                {
-                    value = xmlReader.ReadElementContentAsDecimal();
-                }
-                else if ((xmlReader.Name == "From"))
-                {
-                    from = xmlReader.ReadElementContentAsString();
-                }
-                else if ((xmlReader.Name == "To"))
-                {
-                    to = xmlReader.ReadElementContentAsString();
-                }
-
-                if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "SupportTransaction")
-                {
-                    if (!int.TryParse(dateAsString, out int dateAsInt))
+                    if ((xmlReader.Name == "SupportTransaction") && (xmlReader.NodeType != XmlNodeType.EndElement))
                     {
-                        SupportBank.logger.Error("Problem with interpreting date from XML file");
+                        dateAsString = xmlReader.GetAttribute("Date");
                     }
-                    DateTime date = DateTime.FromOADate(dateAsInt);
-                    listOfTransactions.Add(new Transaction(from, to, description, value, date));
+                    else if ((xmlReader.Name == "Description"))
+                    {
+                        description = xmlReader.ReadElementContentAsString();
+                    }
+                    else if ((xmlReader.Name == "Value"))
+                    {
+                        value = xmlReader.ReadElementContentAsDecimal();
+                    }
+                    else if ((xmlReader.Name == "From"))
+                    {
+                        from = xmlReader.ReadElementContentAsString();
+                    }
+                    else if ((xmlReader.Name == "To"))
+                    {
+                        to = xmlReader.ReadElementContentAsString();
+                    }
+
+                    if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "SupportTransaction")
+                    {
+                        if (!int.TryParse(dateAsString, out int dateAsInt))
+                        {
+                            SupportBank.logger.Error("Problem with interpreting date from XML file");
+                        }
+                        DateTime date = DateTime.FromOADate(dateAsInt);
+                        listOfTransactions.Add(new Transaction(from, to, description, value, date));
+                    }
                 }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine();
+                Console.WriteLine("ERROR: Problem deserializing xml file. See log for details");
+                Console.WriteLine();
+
+                SupportBank.logger.Error("Problem deserializing xml. Exception message:" + e.Message);
             }
 
             return listOfTransactions;
 
+        }
+
+        public List<Transaction> GenerateFromXMLAlternative(string path)
+        {
+            XmlSerializer serializer =
+            new XmlSerializer(typeof(List<Transaction>));
+
+            var listOfTransactions = new List<Transaction>();
+            using (
+            var reader = new FileStream(path, FileMode.Open))
+            {
+                // Serialize the object, and close the TextWriter
+                listOfTransactions=(List<Transaction>)serializer.Deserialize(reader);
+            }
+            return listOfTransactions;
         }
 
         private void LogAndPrintJsonError(Exception e)
@@ -138,23 +165,35 @@ namespace SupportBank
 
         private string[] GetLinesFromCSV(string path)
         {
-            var initialLines = File.ReadAllText(path).Split('\n');
-            int k = initialLines.Length;
-            int emptyLines = 0;
-            while (initialLines[k - 1] == "")
+            try
             {
-                emptyLines++;
-                k--;
-            }
+                var initialLines = File.ReadAllText(path).Split('\n');
 
-            var linesForOutput = new string[initialLines.Length - 1 - emptyLines];
-            for (int i = 1; i < initialLines.Length - emptyLines; i++)
+                int k = initialLines.Length;
+                int emptyLines = 0;
+                while (initialLines[k - 1] == "")
+                {
+                    emptyLines++;
+                    k--;
+                }
+
+                var linesForOutput = new string[initialLines.Length - 1 - emptyLines];
+                for (int i = 1; i < initialLines.Length - emptyLines; i++)
+                {
+                    linesForOutput[i - 1] = initialLines[i];
+                }
+
+                return linesForOutput;
+            }
+            catch
             {
-                linesForOutput[i - 1] = initialLines[i];
+                Console.WriteLine();
+                Console.WriteLine("ERROR: Problem reading file. See Log for details");
+                Console.WriteLine();
+                SupportBank.logger.Error("Error reading csv file: " + path);
             }
-
-            return linesForOutput;
-
+            string[] empty = { };
+            return empty;
         }
 
     }
