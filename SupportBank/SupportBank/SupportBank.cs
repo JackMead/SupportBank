@@ -147,16 +147,16 @@ namespace SupportBank
             var listOfTransactions = new List<Transaction>();
 
             XmlReader xmlReader = XmlReader.Create(path);
-            string date = "";
+            string dateAsString = "";
             string description = "";
             string from = "";
             string to = "";
             decimal value = 0;
             while (xmlReader.Read())
             {
-                if ((xmlReader.Name == "SupportTransaction"))
+                if ((xmlReader.Name == "SupportTransaction")&&(xmlReader.NodeType != XmlNodeType.EndElement))
                 {
-                    date = xmlReader.GetAttribute("Date");
+                    dateAsString = xmlReader.GetAttribute("Date");
                 }
                 else if ((xmlReader.Name == "Description"))
                 {
@@ -177,10 +177,12 @@ namespace SupportBank
 
                 if (xmlReader.NodeType == XmlNodeType.EndElement && xmlReader.Name == "SupportTransaction")
                 {
-                    //TODO date is in 'days after 1/1/1970' format at a guess. Fix that.
-                    DateTime.TryParse(date, out DateTime result);
-
-                    listOfTransactions.Add(new Transaction(from, to, description, value, result));
+                    if(!int.TryParse(dateAsString, out int dateAsInt))
+                    {
+                        logger.Error("Problem with interpreting date from XML file");
+                    }
+                    DateTime date = DateTime.FromOADate(dateAsInt);
+                    listOfTransactions.Add(new Transaction(from, to, description, value, date));
                 }
             }
 
