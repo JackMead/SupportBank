@@ -62,19 +62,15 @@ namespace SupportBank
                 {
                     transactionsPrinter.PrintTransactions(listOfTransactions);
                 }
-                else if (userChoice.Length < 5)
+                else if (userChoice.Length < 5 || userChoice.Substring(0,4)!="list")
                 {
                     Console.WriteLine("Sorry, I didn't understand that.");
                 }
-                else if (userChoice.Substring(0, 4) == "list")
+                else 
                 {
                     string accountName = GetAccountName(userChoice);
                     transactionsPrinter.PrintTransactionsForAccount(listOfTransactions, accountName);
 
-                }
-                else
-                {
-                    Console.WriteLine("Sorry, I didn't understand that.");
                 }
 
                 Console.WriteLine();
