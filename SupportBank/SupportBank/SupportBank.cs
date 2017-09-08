@@ -37,7 +37,6 @@ namespace SupportBank
                 string fileType = DetermineFileType(path);
                 HandleTransactionsFile(path, fileType);
             }
-
         }
 
         private void SetupNLog()
@@ -57,10 +56,9 @@ namespace SupportBank
             var accounts = new Accounts(listOfTransactions);
             accounts.PrintAccounts();
 
-            var transactionsPrinter = new TransactionsPrinter(listOfTransactions);
-            transactionsPrinter.HandleUserRequests();
-
             var userHandler = new UserHandler();
+            userHandler.HandleUserTransactionPrintingRequests(listOfTransactions);
+
             if (userHandler.WantsToExport())
             {
                 userHandler.ExportAsXML(listOfTransactions);

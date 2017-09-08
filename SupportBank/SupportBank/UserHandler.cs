@@ -49,6 +49,42 @@ namespace SupportBank
 
         }
 
+        public void HandleUserTransactionPrintingRequests(List<Transaction> listOfTransactions)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Would you like to see any of the transactions?");
+            Console.WriteLine("Options: \"List All\", \"List [Account name]\", \"Quit\"");
+            var transactionsPrinter = new TransactionsPrinter();
+            string userChoice = Console.ReadLine().ToLower();
+
+            while (userChoice != "quit")
+            {
+                if (userChoice == "list all")
+                {
+                    transactionsPrinter.PrintTransactions(listOfTransactions);
+                }
+                else if (userChoice.Length < 5)
+                {
+                    Console.WriteLine("Sorry, I didn't understand that.");
+                }
+                else if (userChoice.Substring(0, 4) == "list")
+                {
+                    string accountName = GetAccountName(userChoice);
+                    transactionsPrinter.PrintTransactionsForAccount(listOfTransactions, accountName);
+
+                }
+                else
+                {
+                    Console.WriteLine("Sorry, I didn't understand that.");
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Is there anything else you would like to do?");
+                userChoice = Console.ReadLine().ToLower();
+
+            }
+        }
+
         public string GetUserFilePath()
         {
             Console.WriteLine("If you have transactions (in json,xml or csv form) you would like us to handle, please provide the full path:");
@@ -112,6 +148,12 @@ namespace SupportBank
         {
             Console.WriteLine("What would you like the file to be called?");
             return Console.ReadLine();
+        }
+
+        public string GetAccountName(string userChoice)
+        {
+            string name = userChoice.Substring(5);
+            return name.ToLower();
         }
 
     }
