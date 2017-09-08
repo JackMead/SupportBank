@@ -23,15 +23,17 @@ namespace SupportBank
         {
             SetupNLog();
 
-            WhichYearToProcess();
+            string path = ReturnFilePathForChoiceOfYear();
+            string fileType = DetermineFileType(path);
+            var listOfTransactions = GenerateTransactions(path, fileType);
+            var listOfAccounts = GenerateAccountsFromTransactions(listOfTransactions);
+            HandleUserRequests(listOfTransactions);
+            PrintAccounts(listOfAccounts);
 
             HandleUserProvidedTransactionFile();
-
-
-
         }
 
-        private void WhichYearToProcess()
+        private string ReturnFilePathForChoiceOfYear()
         {
             Console.WriteLine("Which year would you like to see? 2012-2015");
             string userResponse = "";
@@ -67,12 +69,8 @@ namespace SupportBank
                         break;
                 }
             }
-
-            string fileType = DetermineFileType(path);
-            var listOfTransactions = GenerateTransactions(path, fileType);
-            var listOfAccounts = GenerateAccountsFromTransactions(listOfTransactions);
-            HandleUserInput(listOfTransactions);
-            PrintAccounts(listOfAccounts);
+            return path;
+            
         }
 
         private List<Transaction> GenerateTransactions(string path, string fileType)
@@ -106,17 +104,19 @@ namespace SupportBank
                 string[] elements = line.Split(',');
                 if (!decimal.TryParse(elements[4], out decimal amount))
                 {
-                    logger.Error("The transaction amount {0} is not a vaid decimal", elements[4]);
+                    logger.Error("The transaction amount {0} is not a vaid decimal. Transaction not included.", elements[4]);
                     Console.WriteLine();
                     Console.WriteLine("ERROR OCCURED PROCESSING TRANSACTIONS: See log for details");
                     Console.WriteLine();
+                    continue;
                 }
                 if (!DateTime.TryParse(elements[0], out DateTime date))
                 {
-                    logger.Error("The date \"{0}\" is not a vaid decimal", elements[0]);
+                    logger.Error("The date \"{0}\" is not a vaid date. Transaction not included.", elements[0]);
                     Console.WriteLine();
                     Console.WriteLine("ERROR OCCURED PROCESSING TRANSACTIONS: See log for details");
                     Console.WriteLine();
+                    continue;
                 }
                 //Order in CSV is Date,From,To,Narrative,Amount
                 listOfTransactions.Add(new Transaction(elements[1], elements[2], elements[3], amount, date));
@@ -210,7 +210,7 @@ namespace SupportBank
             return listOfAccounts;
         }
 
-        private void HandleUserInput(List<Transaction> listOfTransactions)
+        private void HandleUserRequests(List<Transaction> listOfTransactions)
         {
             Console.WriteLine("What would you like to do?");
             Console.WriteLine("Options: \"List All\", \"List [Account name]\", \"Quit\"");
