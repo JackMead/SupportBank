@@ -65,6 +65,7 @@ namespace SupportBank
 
         }
 
+        //For reading XML other than the 2012 transactions file
         public List<Transaction> GenerateTransactionsAlternative(string path)
         {
             XmlSerializer serializer =
